@@ -13,7 +13,7 @@ class AnalysisTempoCount:
         # Path to video file.
         self.video_path = video_path
         self.fitness = fitness
-        self.out_video_path = os.path.join(out_video_dir,f'{self.fitness}_anlysis.mp4')
+        self.out_video_path = out_video_dir
         self.class_name = f'{self.fitness}_down'
         self.pose_samples_folder = os.path.join(sample_csv_path, fitness)
         
@@ -54,13 +54,15 @@ class AnalysisTempoCount:
             # Graphic looks nicer if it's the same as `top_n_by_mean_distance`.
             plot_y_max=10)
         
-        self.out_video = cv2.VideoWriter(self.out_video_path, cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
-        
         
         
     def analysis_tempo(self, show=False):
         frame_idx = 0
         output_frame = None
+        
+        n_out_video = 0
+        out_video_name = f'{self.fitness}_anlysis_{n_out_video}.mp4'
+        out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
         
         with tqdm.tqdm(total=self.video_n_frames, position=0, leave=True) as pbar:
             while True:
@@ -110,6 +112,13 @@ class AnalysisTempoCount:
                     # take the latest repetitions count.
                     repetitions_count = self.repetition_counter.n_repeats
                 
+                if repetitions_count > n_out_video:
+                    n_out_video += 1
+                    out_video.release()
+                    
+                    out_video_name = f'{self.fitness}_anlysis_{n_out_video}.mp4'
+                    out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
+                
                 # Draw classification plot and repetition counter.
                 output_frame = self.pose_classification_visualizer(
                     frame=output_frame,
@@ -119,7 +128,7 @@ class AnalysisTempoCount:
 
                 # Save the output frame.
                 
-                self.out_video.write(cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
+                out_video.write(cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
 
                 if show:
                     cv2.imshow('Output Video', cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
@@ -133,7 +142,7 @@ class AnalysisTempoCount:
 
 
         # Save and Close Video
-        self.out_video.release()
+        out_video.release()
         self.video.release()
         
         print("Save video path :", self.out_video_path)
@@ -145,10 +154,10 @@ class AnalysisTempoCount:
 
 # main
 
-fitness = 'squat' # squat or pushups
+fitness = 'pushups' # squat or pushups
 
 video_path=f'data/test_img/{fitness}.mp4'       # input video path
-out_video_dir = 'Result'                        # output video dir
+out_video_dir = f'Result/{fitness}'                        # output video dir
 sample_csv_path = 'data/fitness_poses_csvs_out' # Landmark Info of fitness poses
 mode = "Video"                                  # Video or Webcam
 
