@@ -5,18 +5,17 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 
 # Specify your video name and target pose class to count the repetitions.
 class AnalysisTempoCount:
-    def __init__(self, fitness, video_path, out_video_path, sample_csv_path):
+    def __init__(self, fitness, video_path, out_video_dir, sample_csv_path, mode = 'Video'):
         
         # Path to video file.
         self.video_path = video_path
         self.fitness = fitness
-        self.out_video_dir = out_video_path
-        self.out_video_path = f'{out_video_path}/{self.fitness}_anlysis.mp4'
+        self.out_video_path = os.path.join(out_video_dir,f'{self.fitness}_anlysis.mp4')
         self.class_name = f'{self.fitness}_down'
         self.pose_samples_folder = os.path.join(sample_csv_path, fitness)
         
         # Video parameters.
-        self.video = cv2.VideoCapture(self.video_path)
+        self.video = cv2.VideoCapture(self.video_path) if mode == 'Video' else cv2.VideoCapture(1)
         
         self.video_n_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
         self.video_fps = self.video.get(cv2.CAP_PROP_FPS)
@@ -56,11 +55,12 @@ class AnalysisTempoCount:
         
         
         
-    def analysis_tempo(self):
+    def analysis_tempo(self, show=False):
         frame_idx = 0
         output_frame = None
         
-        cv2.namedWindow('Video', cv2.WINDOW_NORMAL)
+        if show:
+            cv2.namedWindow('Video', cv2.WINDOW_NORMAL)
         
         with tqdm.tqdm(total=self.video_n_frames, position=0, leave=True) as pbar:
             while True:
@@ -120,11 +120,12 @@ class AnalysisTempoCount:
                 # Save the output frame.
                 self.out_video.write(cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
 
-                cv2.imshow('Output Video', cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
+                if show:
+                    cv2.imshow('Output Video', cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
 
-                # Exit the loop if 'q' is pressed.
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                    # Exit the loop if 'q' is pressed.
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
                 
                 frame_idx += 1
                 pbar.update()
@@ -137,12 +138,13 @@ class AnalysisTempoCount:
         # Release MediaPipe resources.
         self.pose_tracker.close()
         
-        cv2.destroyAllWindows()
+        if show:
+            cv2.destroyAllWindows()
 
 
 # main
 
-fitness = 'squat'
+fitness = 'squat' # squat or pushups
 
-squat = AnalysisTempoCount(fitness=fitness, video_path=f'data/img/{fitness}.mp4', out_video_path='data', sample_csv_path='data/fitness_poses_csvs_out')
-squat.analysis_tempo()
+squat = AnalysisTempoCount(fitness=fitness, video_path=f'data/img/{fitness}.mp4', out_video_dir='Result', sample_csv_path='data/fitness_poses_csvs_out', mode = "Video")
+squat.analysis_tempo(show = True)
