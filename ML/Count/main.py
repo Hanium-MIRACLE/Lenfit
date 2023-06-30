@@ -7,6 +7,9 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 class AnalysisTempoCount:
     def __init__(self, fitness, video_path, out_video_dir, sample_csv_path, mode = 'Video'):
         
+        assert fitness in ['pushups', 'squat'], 'Unexpected fitness: {}'.format(fitness)
+        assert mode in ['Video', 'Webcam'], 'Unexpected mode: {}'.format(mode)
+        
         # Path to video file.
         self.video_path = video_path
         self.fitness = fitness
@@ -109,7 +112,7 @@ class AnalysisTempoCount:
                     # Don't update the counter presuming that person is 'frozen'. Just
                     # take the latest repetitions count.
                     repetitions_count = self.repetition_counter.n_repeats
-
+                
                 # Draw classification plot and repetition counter.
                 output_frame = self.pose_classification_visualizer(
                     frame=output_frame,
@@ -118,6 +121,7 @@ class AnalysisTempoCount:
                     repetitions_count=repetitions_count)
 
                 # Save the output frame.
+                
                 self.out_video.write(cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR))
 
                 if show:
@@ -131,10 +135,12 @@ class AnalysisTempoCount:
                 pbar.update()
 
 
-        # Close output video.
+        # Save and Close Video
         self.out_video.release()
         self.video.release()
-
+        
+        print("Save video path :", self.out_video_path)
+        
         # Release MediaPipe resources.
         self.pose_tracker.close()
         
@@ -144,7 +150,16 @@ class AnalysisTempoCount:
 
 # main
 
-fitness = 'squat' # squat or pushups
+fitness = 'pushups' # squat or pushups
 
-squat = AnalysisTempoCount(fitness=fitness, video_path=f'data/img/{fitness}.mp4', out_video_dir='Result', sample_csv_path='data/fitness_poses_csvs_out', mode = "Video")
+video_path=f'data/test_img/{fitness}.mp4'       # input video path
+out_video_dir = 'Result'                        # output video dir
+sample_csv_path = 'data/fitness_poses_csvs_out' # Landmark Info of fitness poses
+mode = "Video"                                  # Video or Webcam
+
+squat = AnalysisTempoCount(fitness=fitness, 
+                           video_path=video_path, 
+                           out_video_dir = out_video_dir, 
+                           sample_csv_path = sample_csv_path, 
+                           mode = mode)
 squat.analysis_tempo(show = True)
