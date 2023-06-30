@@ -62,9 +62,6 @@ class AnalysisTempoCount:
         frame_idx = 0
         output_frame = None
         
-        if show:
-            cv2.namedWindow('Video', cv2.WINDOW_NORMAL)
-        
         with tqdm.tqdm(total=self.video_n_frames, position=0, leave=True) as pbar:
             while True:
                 # Get next frame of the video.
@@ -143,14 +140,12 @@ class AnalysisTempoCount:
         
         # Release MediaPipe resources.
         self.pose_tracker.close()
-        
-        if show:
-            cv2.destroyAllWindows()
+
 
 
 # main
 
-fitness = 'pushups' # squat or pushups
+fitness = 'squat' # squat or pushups
 
 video_path=f'data/test_img/{fitness}.mp4'       # input video path
 out_video_dir = 'Result'                        # output video dir
