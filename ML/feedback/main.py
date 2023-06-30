@@ -1,19 +1,17 @@
 import numpy as np
-import mediapipe as mp
+import mediapipe as mp 
 import cv2
 
-import joint as jt
 import parameter as pm
-import feedback as fb
 import function as fn
 
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-state = 'Squat'
+state = pm.workout[3] 
 
-cap = cv2.VideoCapture('/Users/iyongbin/Repository/Lenfit/ML/Dataset/video/bodysquat05.mp4')
+cap = cv2.VideoCapture(pm.adress[state])
 
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
     while cap.isOpened():
@@ -42,39 +40,27 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         landmarks = results.pose_landmarks.landmark
         angle_dict = dict()
 
-        # calculate angle
-        if state == 'Squat':
-            for i, joints in enumerate(jt.squat_joint):
-                # get coordinates
-                xy_data = [[landmarks[joint].x, landmarks[joint].y] for joint in joints]
+        # ------------------- feedback ------------------- #
+        for i, jnts in enumerate(pm.joint[state]): 
+            # get coordinates
+            xy_data = [[landmarks[jnt].x, landmarks[jnt].y] for jnt in jnts]
 
-                # calculate angle
-                angle = np.abs(90 - fn.calculate_angle(xy_data[0], xy_data[1], xy_data[1]+[0, -1])) # vertical angel
-                angle_dict[joints[1]] = angle
-                # feedback
-                comment = fb.angle_feedback(angle, state, pm.squat_limits[i], pm.squat_comments[i])
+            # calculate angle
+            angle = np.abs(90 - fn.calculate_angle(xy_data[0], xy_data[1], xy_data[1]+[0, -1])) # vertical angel
+            angle_dict[jnts[1]] = angle
+            # feedback
+            comment = fn.feedback(angle, pm.limit[state][i], 'example') # pm.comment[state][i] 추가
 
-                # visualize angle
-                cv2.putText(img, str(angle) +'    '+ str(comment) ,
-                            tuple(np.multiply(xy_data[1], [width, height]).astype(int)), # np.multiply(xy_data[1], [640, 480]).astype(int)의 의미: x, y 좌표를 640, 480으로 곱해준다.
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
-                            )
-                # cv2.putText(img, str(fb), (1000, 100),
-                #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-
-
-        elif state == 'Pushup':
-            pass
-        elif state == 'Lunge':
-            pass
-        elif state == 'Pullup':
-            pass
-        elif state == 'ArmCurl':
-            pass
-            # Visualize angle
-
+            # visualize angle
+            cv2.putText(img, str(angle) +'    '+ str(comment) ,
+                        tuple(np.multiply(xy_data[1], [width, height]).astype(int)), # np.multiply(xy_data[1], [640, 480]).astype(int)의 의미: x, y 좌표를 640, 480으로 곱해준다.
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA
+                        )
+            # cv2.putText(img, str(fb), (1000, 100),
+            #             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
         # except:
         #     print('error')
+        # ------------------- feedback ------------------- #
 
 
         mp_drawing.draw_landmarks(img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
