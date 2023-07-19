@@ -33,7 +33,7 @@ class AnalysisTempoCount:
         self.pose_samples_folder = os.path.join(sample_csv_path, fitness)
         
         # Video parameters.
-        self.video = cv2.VideoCapture(self.video_path) if mode == 'Video' else cv2.VideoCapture(0)
+        self.video = cv2.VideoCapture(self.video_path if mode == 'Video' else 0)
         
         self.video_n_frames = self.video.get(cv2.CAP_PROP_FRAME_COUNT)
         self.video_fps = self.video.get(cv2.CAP_PROP_FPS)
@@ -148,7 +148,7 @@ class AnalysisTempoCount:
                 output_frame = self.pose_classification_visualizer(
                     frame=output_frame,
                     pose_classification=pose_classification,
-                    pose_classification_filtered=None,#pose_classification_filtered,
+                    pose_classification_filtered = None, #pose_classification_filtered,
                     repetitions_count=repetitions_count)
 
                 # Draw Classification Result on the frame.
@@ -843,7 +843,7 @@ class PoseClassificationVisualizer(object):
     output_width = output_img.size[0]
     output_height = output_img.size[1]
 
-    # Draw the plot.
+    # #Draw the plot.
     # img = self._plot_classification_history(output_width, output_height) # creates new image
     # img.thumbnail((int(output_width * self._plot_max_width),
     #                int(output_height * self._plot_max_height)),
