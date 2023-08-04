@@ -1,4 +1,6 @@
 import numpy as np
+import copy 
+import itertools
 import os
 import io
 from PIL import Image
@@ -16,7 +18,6 @@ from mediapipe.python.solutions import drawing_utils as mp_drawing
 from mediapipe.python.solutions import pose as mp_pose
 
 from src.func import *
-from src.object import *
 
 # Counting Repetitions
 class AnalysisTempoCount:
@@ -24,6 +25,19 @@ class AnalysisTempoCount:
         
         assert fitness in ['pushups', 'squat'], 'Unexpected fitness: {}'.format(fitness)
         assert mode in ['Video', 'Webcam'], 'Unexpected mode: {}'.format(mode)
+        
+        if fitness == 'squat':
+          self.main_land_name = {'left' : ['left_shoulder', 'left_hip', 'left_knee', 'left_ankle'], 'right' : ['right_shoulder', 'right_hip', 'right_knee', 'right_ankle']}
+          self.main_land_num = {'left' : [11, 23, 25, 27], 'right' : [12, 24, 26, 28]}
+        if fitness == 'pushups':
+          self.main_land_name = {'left' : ['left_wrist', 'left_elbow', 'left_shoulder', 'left_hip', 'left_knee'], 'right' : ['right_wrist', 'right_elbow', 'right_shoulder', 'right_hip', 'right_knee']}
+          self.main_land_num = {'left' : [15, 13, 11, 23, 25], 'right' : [16, 14, 12, 24, 26]}
+        
+        self.angle_info = {}
+        for side in ['left', 'right']:
+          self.angle_info[side] = {}
+          for land in self.main_land_name[side][1:-1]:
+            self.angle_info[side][land] = []
         
         # Path to video file.
         self.video_path = video_path
@@ -77,15 +91,21 @@ class AnalysisTempoCount:
         else:
             self.analysis_tempo(show)
         
+        self.draw_save_angle_plot()
+        
     def analysis_tempo(self, show=False):
         
-        frame_idx = 0
+        self.frame_idx = 0
         output_frame = None
         
         n_out_video = 0
-        out_video_name = f'{self.fitness}_anlysis_{n_out_video}.mp4'
-        out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
+        one_tempo_angle = copy.deepcopy(self.angle_info)
+        one_tempo_angle_tmp = copy.deepcopy(self.angle_info)
         
+        print("TEST1")
+        out_video_name = f'{self.fitness}_{n_out_video}.mp4'
+        out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
+        print("TEST2")
         with tqdm.tqdm(total=self.video_n_frames, position=0, leave=True) as pbar:
             while True:
                 # Get next frame of the video.
@@ -133,14 +153,34 @@ class AnalysisTempoCount:
                     # take the latest repetitions count.
                     repetitions_count = self.repetition_counter.n_repeats
                     
+                # Calculate angle of the main landmarks and Save the angle info
+                for side in ['left', 'right']:
+                  for i in range(1, len(self.main_land_name[side]) - 1):
+                    a = pose_landmarks[self.main_land_num[side][i-1]]
+                    b = pose_landmarks[self.main_land_num[side][i]]
+                    c = pose_landmarks[self.main_land_num[side][i+1]]
+                  
+                    angle = calculate_angle(a, b, c)
+                    one_tempo_angle[side][self.main_land_name[side][i]].append(angle)
+                    # self.angle_info[side][self.main_land_name[side][i]] = np.append(self.angle_info[side][self.main_land_name[side][i]], angle)
+            
+                    
                 start_pose = f"{self.fitness}_up" if self.class_name == f"{self.fitness}_down" else f"{self.fitness}_down"
                     
                 if repetitions_count > n_out_video:
                     if start_pose in pose_classification_filtered and pose_classification_filtered[start_pose] == 9.999999999999998:
                     
                         n_out_video += 1
+                        for side in ['left', 'right']:
+                          for i in range(1, len(self.main_land_name[side]) - 1):
+                            self.angle_info[side][self.main_land_name[side][i]].append(one_tempo_angle[side][self.main_land_name[side][i]])
+                            
+                        del(one_tempo_angle)
+                        one_tempo_angle = copy.deepcopy(one_tempo_angle_tmp)
+                        
+                        self.last_frame_idx = self.frame_idx + 1
                         out_video.release()
-                        out_video_name = f'{self.fitness}_anlysis_{n_out_video}.mp4'
+                        out_video_name = f'{self.fitness}_{n_out_video}.mp4'
                         out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
                 
                 
@@ -167,7 +207,7 @@ class AnalysisTempoCount:
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
                 
-                frame_idx += 1
+                self.frame_idx += 1
                 pbar.update()
 
 
@@ -186,7 +226,7 @@ class AnalysisTempoCount:
         start_time = time.time()
         countdown_over = False
         
-        frame_idx = 0
+        self.frame_idx = 0
         output_frame = None
         
         n_out_video = 0
@@ -295,7 +335,7 @@ class AnalysisTempoCount:
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
                 
-                frame_idx += 1
+                self.frame_idx += 1
                 pbar.update()
 
 
@@ -307,6 +347,24 @@ class AnalysisTempoCount:
         
         # Release MediaPipe resources.
         self.pose_tracker.close()
+    
+    # Plot the information in angle info by left and right and save as two image files
+    def draw_save_angle_plot(self):
+      x_line = np.arange(self.last_frame_idx)
+      print(sum([len(i) for i in self.angle_info['left']['left_hip']]))
+      for side in ['left', 'right']:
+        for key in self.angle_info[side].keys():
+          y_line = list(itertools.chain.from_iterable(self.angle_info[side][key]))
+          plt.plot(x_line, y_line, label = f'{key}')
+        plt.xlabel('frame')
+        plt.ylabel('Angle')
+        plt.legend(loc='lower left', fontsize=8)
+        plt.title(f'{side}')
+        
+        plt.savefig(os.path.join(self.out_video_path, f'{self.fitness}_{side}.png')) 
+        plt.clf() 
+      print("Complete to save angle plot")
+
 
 # Pose embedding
 class FullBodyPoseEmbedder(object):
