@@ -1,0 +1,2 @@
+model_checkpoint_path: "squat_weight"
+all_model_checkpoint_paths: "squat_weight"
