@@ -18,29 +18,39 @@ from mediapipe.python.solutions import pose as mp_pose
 class FullBodyPoseEmbedder(object):
   """Converts 3D pose landmarks into 3D embedding."""
 
-  def __init__(self, torso_size_multiplier=2.5):
+  def __init__(self, fitness, torso_size_multiplier=2.5):
     # Multiplier to apply to the torso to get minimal body size.
     self._torso_size_multiplier = torso_size_multiplier
-
+    self.fitness = fitness
     # Names of the landmarks as they appear in the prediction.
-    self._landmark_names = [
-        'nose',
-        'left_eye_inner', 'left_eye', 'left_eye_outer',
-        'right_eye_inner', 'right_eye', 'right_eye_outer',
-        'left_ear', 'right_ear',
-        'mouth_left', 'mouth_right',
+    if fitness == 'squat':
+      self._landmark_names = [
         'left_shoulder', 'right_shoulder',
-        'left_elbow', 'right_elbow',
-        'left_wrist', 'right_wrist',
-        'left_pinky_1', 'right_pinky_1',
-        'left_index_1', 'right_index_1',
-        'left_thumb_2', 'right_thumb_2',
         'left_hip', 'right_hip',
         'left_knee', 'right_knee',
         'left_ankle', 'right_ankle',
         'left_heel', 'right_heel',
         'left_foot_index', 'right_foot_index',
-    ]
+      ]
+    else :
+      self._landmark_names = [
+          'nose',
+          'left_eye_inner', 'left_eye', 'left_eye_outer',
+          'right_eye_inner', 'right_eye', 'right_eye_outer',
+          'left_ear', 'right_ear',
+          'mouth_left', 'mouth_right',
+          'left_shoulder', 'right_shoulder',
+          'left_elbow', 'right_elbow',
+          'left_wrist', 'right_wrist',
+          'left_pinky_1', 'right_pinky_1',
+          'left_index_1', 'right_index_1',
+          'left_thumb_2', 'right_thumb_2',
+          'left_hip', 'right_hip',
+          'left_knee', 'right_knee',
+          'left_ankle', 'right_ankle',
+          'left_heel', 'right_heel',
+          'left_foot_index', 'right_foot_index',
+      ]
 
   def __call__(self, landmarks):
     """Normalizes pose landmarks and converts to embedding
@@ -131,18 +141,13 @@ class FullBodyPoseEmbedder(object):
       Numpy array with pose embedding of shape (M, 3) where `M` is the number of
       pairwise distances.
     """
-    embedding = np.array([
+    if self.fitness == 'squat':
+      embedding = np.array([
         # One joint.
 
         self._get_distance(
             self._get_average_by_names(landmarks, 'left_hip', 'right_hip'),
             self._get_average_by_names(landmarks, 'left_shoulder', 'right_shoulder')),
-
-        self._get_distance_by_names(landmarks, 'left_shoulder', 'left_elbow'),
-        self._get_distance_by_names(landmarks, 'right_shoulder', 'right_elbow'),
-
-        self._get_distance_by_names(landmarks, 'left_elbow', 'left_wrist'),
-        self._get_distance_by_names(landmarks, 'right_elbow', 'right_wrist'),
 
         self._get_distance_by_names(landmarks, 'left_hip', 'left_knee'),
         self._get_distance_by_names(landmarks, 'right_hip', 'right_knee'),
@@ -152,42 +157,77 @@ class FullBodyPoseEmbedder(object):
 
         # Two joints.
 
-        self._get_distance_by_names(landmarks, 'left_shoulder', 'left_wrist'),
-        self._get_distance_by_names(landmarks, 'right_shoulder', 'right_wrist'),
-
         self._get_distance_by_names(landmarks, 'left_hip', 'left_ankle'),
         self._get_distance_by_names(landmarks, 'right_hip', 'right_ankle'),
 
         # Four joints.
-
-        self._get_distance_by_names(landmarks, 'left_hip', 'left_wrist'),
-        self._get_distance_by_names(landmarks, 'right_hip', 'right_wrist'),
 
         # Five joints.
 
         self._get_distance_by_names(landmarks, 'left_shoulder', 'left_ankle'),
         self._get_distance_by_names(landmarks, 'right_shoulder', 'right_ankle'),
 
-        self._get_distance_by_names(landmarks, 'left_hip', 'left_wrist'),
-        self._get_distance_by_names(landmarks, 'right_hip', 'right_wrist'),
-
-        # Cross body.
-
-        self._get_distance_by_names(landmarks, 'left_elbow', 'right_elbow'),
-        self._get_distance_by_names(landmarks, 'left_knee', 'right_knee'),
-
-        self._get_distance_by_names(landmarks, 'left_wrist', 'right_wrist'),
-        self._get_distance_by_names(landmarks, 'left_ankle', 'right_ankle'),
-
-        # Body bent direction.
-
-        # self._get_distance(
-        #     self._get_average_by_names(landmarks, 'left_wrist', 'left_ankle'),
-        #     landmarks[self._landmark_names.index('left_hip')]),
-        # self._get_distance(
-        #     self._get_average_by_names(landmarks, 'right_wrist', 'right_ankle'),
-        #     landmarks[self._landmark_names.index('right_hip')]),
     ])
+      
+    else :
+      embedding = np.array([
+          # One joint.
+
+          self._get_distance(
+              self._get_average_by_names(landmarks, 'left_hip', 'right_hip'),
+              self._get_average_by_names(landmarks, 'left_shoulder', 'right_shoulder')),
+
+          self._get_distance_by_names(landmarks, 'left_shoulder', 'left_elbow'),
+          self._get_distance_by_names(landmarks, 'right_shoulder', 'right_elbow'),
+
+          self._get_distance_by_names(landmarks, 'left_elbow', 'left_wrist'),
+          self._get_distance_by_names(landmarks, 'right_elbow', 'right_wrist'),
+
+          self._get_distance_by_names(landmarks, 'left_hip', 'left_knee'),
+          self._get_distance_by_names(landmarks, 'right_hip', 'right_knee'),
+
+          self._get_distance_by_names(landmarks, 'left_knee', 'left_ankle'),
+          self._get_distance_by_names(landmarks, 'right_knee', 'right_ankle'),
+
+          # Two joints.
+
+          self._get_distance_by_names(landmarks, 'left_shoulder', 'left_wrist'),
+          self._get_distance_by_names(landmarks, 'right_shoulder', 'right_wrist'),
+
+          self._get_distance_by_names(landmarks, 'left_hip', 'left_ankle'),
+          self._get_distance_by_names(landmarks, 'right_hip', 'right_ankle'),
+
+          # Four joints.
+
+          self._get_distance_by_names(landmarks, 'left_hip', 'left_wrist'),
+          self._get_distance_by_names(landmarks, 'right_hip', 'right_wrist'),
+
+          # Five joints.
+
+          self._get_distance_by_names(landmarks, 'left_shoulder', 'left_ankle'),
+          self._get_distance_by_names(landmarks, 'right_shoulder', 'right_ankle'),
+
+          self._get_distance_by_names(landmarks, 'left_hip', 'left_wrist'),
+          self._get_distance_by_names(landmarks, 'right_hip', 'right_wrist'),
+
+          # Cross body.
+
+          self._get_distance_by_names(landmarks, 'left_elbow', 'right_elbow'),
+          self._get_distance_by_names(landmarks, 'left_knee', 'right_knee'),
+
+          self._get_distance_by_names(landmarks, 'left_wrist', 'right_wrist'),
+          self._get_distance_by_names(landmarks, 'left_ankle', 'right_ankle'),
+
+          # Body bent direction.
+
+          # self._get_distance(
+          #     self._get_average_by_names(landmarks, 'left_wrist', 'left_ankle'),
+          #     landmarks[self._landmark_names.index('left_hip')]),
+          # self._get_distance(
+          #     self._get_average_by_names(landmarks, 'right_wrist', 'right_ankle'),
+          #     landmarks[self._landmark_names.index('right_hip')]),
+      ])
+    
 
     return embedding
 
@@ -334,7 +374,7 @@ class PoseClassifier(object):
         }
     """
     # Check that provided and target poses have the same shape.
-    assert pose_landmarks.shape == (self._n_landmarks, self._n_dimensions), 'Unexpected shape: {}'.format(pose_landmarks.shape)
+    assert pose_landmarks.shape == (self._n_landmarks, self._n_dimensions), 'Unexpected shape: {} and {}'.format(pose_landmarks.shape, (self._n_landmarks, self._n_dimensions))
 
     # Get given pose embedding.
     pose_embedding = self._pose_embedder(pose_landmarks)
@@ -619,14 +659,22 @@ class BootstrapHelper(object):
   def __init__(self,
                images_in_folder,
                images_out_folder,
-               csvs_out_folder):
+               csvs_out_folder,
+               fitness):
     self._images_in_folder = images_in_folder
     self._images_out_folder = images_out_folder
     self._csvs_out_folder = csvs_out_folder
 
     # Get list of pose classes and print image statistics.
     self._pose_class_names = sorted([n for n in os.listdir(self._images_in_folder) if not n.startswith('.')])
-
+    
+    # 얼굴, 팔꿈치, 손목, 손, 손가락에 해당하는 landmark 인덱스
+    
+    if fitness == 'squat':
+      self.exclude_landmarks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 18, 19 ,20, 21, 22]
+    else :
+      self.exclude_landmarks = []
+    
   def bootstrap(self, per_pose_class_limit=None):
     """Bootstraps images in a given folder.
 
@@ -699,15 +747,21 @@ class BootstrapHelper(object):
             frame_height, frame_width = output_frame.shape[0], output_frame.shape[1]
             pose_landmarks = np.array(
                 [[lmk.x * frame_width, lmk.y * frame_height, lmk.z * frame_width]
-                 for lmk in pose_landmarks.landmark],
+                for idx, lmk in enumerate(pose_landmarks.landmark) if idx not in self.exclude_landmarks],
                 dtype=np.float32)
-            assert pose_landmarks.shape == (33, 3), 'Unexpected landmarks shape: {}'.format(pose_landmarks.shape)
+            
+            # pose_landmarks = np.array(
+            #     [[lmk.x * frame_width, lmk.y * frame_height, lmk.z * frame_width]
+            #      for lmk in pose_landmarks.landmark],
+            #     dtype=np.float32)
+            
+            #assert pose_landmarks.shape == (33, 3), 'Unexpected landmarks shape: {}'.format(pose_landmarks.shape)
             csv_out_writer.writerow([image_name] + pose_landmarks.flatten().astype(str).tolist())
 
           # Draw XZ projection and concatenate with the image.
-          projection_xz = self._draw_xz_projection(
-              output_frame=output_frame, pose_landmarks=pose_landmarks)
-          output_frame = np.concatenate((output_frame, projection_xz), axis=1)
+          # projection_xz = self._draw_xz_projection(
+          #     output_frame=output_frame, pose_landmarks=pose_landmarks)
+          # output_frame = np.concatenate((output_frame, projection_xz), axis=1)
 
   def _draw_xz_projection(self, output_frame, pose_landmarks, r=0.5, color='red'):
     frame_height, frame_width = output_frame.shape[0], output_frame.shape[1]

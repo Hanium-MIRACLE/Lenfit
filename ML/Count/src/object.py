@@ -28,6 +28,12 @@ class AnalysisTempoCount:
         if fitness == 'pushups':
           self.main_land_name = {'left' : ['left_wrist', 'left_elbow', 'left_shoulder', 'left_hip', 'left_knee'], 'right' : ['right_wrist', 'right_elbow', 'right_shoulder', 'right_hip', 'right_knee']}
           self.main_land_num = {'left' : [15, 13, 11, 23, 25], 'right' : [16, 14, 12, 24, 26]}
+          
+    
+        if fitness == 'squat':
+            self.exclude_landmarks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16, 17, 18, 19 ,20, 21, 22]
+        else :
+            self.exclude_landmarks = []
         
         self.angle_info = {}
         for side in ['left', 'right']:
@@ -53,13 +59,14 @@ class AnalysisTempoCount:
         # Initialize tracker.
         self.pose_tracker = mp_pose.Pose()
         # Initialize embedder.
-        self.pose_embedder = FullBodyPoseEmbedder()
+        self.pose_embedder = FullBodyPoseEmbedder(self.fitness)
         # Initialize classifier.
         self.pose_classifier = PoseClassifier(
                                     pose_samples_folder=self.pose_samples_folder,
                                     pose_embedder=self.pose_embedder,
                                     top_n_by_max_distance=30,
-                                    top_n_by_mean_distance=10)
+                                    top_n_by_mean_distance=10,
+                                    n_landmarks=12 if self.fitness == 'squat' else 33)
         
         # Initialize EMA smoothing.
         self.pose_classification_filter = EMADictSmoothing(
@@ -87,8 +94,8 @@ class AnalysisTempoCount:
         else:
             self.analysis_tempo(show)
         
-        self.draw_save_angle_plot()
-        
+        self.draw_save_angle_plot()    
+
     def analysis_tempo(self, show=False):
         
         self.frame_idx = 0
@@ -97,11 +104,10 @@ class AnalysisTempoCount:
         n_out_video = 0
         one_tempo_angle = copy.deepcopy(self.angle_info)
         one_tempo_angle_tmp = copy.deepcopy(self.angle_info)
-        
-        print("TEST1")
+            
         out_video_name = f'{self.fitness}_{n_out_video}.mp4'
         out_video = cv2.VideoWriter(os.path.join(self.out_video_path, out_video_name), cv2.VideoWriter_fourcc(*'mp4v'), self.video_fps, (self.video_width, self.video_height))
-        print("TEST2")
+
         with tqdm.tqdm(total=self.video_n_frames, position=0, leave=True) as pbar:
             while True:
                 # Get next frame of the video.
@@ -125,9 +131,13 @@ class AnalysisTempoCount:
                 if pose_landmarks is not None:
                 # Get landmarks.
                     frame_height, frame_width = output_frame.shape[0], output_frame.shape[1]
+                    # pose_landmarks = np.array([[lmk.x * frame_width, lmk.y * frame_height, lmk.z * frame_width]
+                    #                             for lmk in pose_landmarks.landmark], dtype=np.float32)
+                    
                     pose_landmarks = np.array([[lmk.x * frame_width, lmk.y * frame_height, lmk.z * frame_width]
-                                                for lmk in pose_landmarks.landmark], dtype=np.float32)
-                    assert pose_landmarks.shape == (33, 3), 'Unexpected landmarks shape: {}'.format(pose_landmarks.shape)
+                                                for idx, lmk in enumerate(pose_landmarks.landmark) if idx not in self.exclude_landmarks],
+                                                dtype=np.float32)
+                    assert pose_landmarks.shape == ((12, 3) if self.fitness == 'squat' else (33, 3)), 'Unexpected landmarks shape: {}'.format(pose_landmarks.shape)
 
                     # Classify the pose on the current frame.
                     pose_classification = self.pose_classifier(pose_landmarks)
@@ -151,13 +161,19 @@ class AnalysisTempoCount:
                     
                 # Calculate angle of the main landmarks and Save the angle info
                 for side in ['left', 'right']:
-                  for i in range(1, len(self.main_land_name[side]) - 1):
-                    a = pose_landmarks[self.main_land_num[side][i-1]]
-                    b = pose_landmarks[self.main_land_num[side][i]]
-                    c = pose_landmarks[self.main_land_num[side][i+1]]
+                    for i in range(1, len(self.main_land_name[side]) - 1):
+                        if self.fitness == 'squat':
+                            a = pose_landmarks[(i - 1) * 2 + (1 if side == 'right' else 0)]
+                            b = pose_landmarks[i * 2 + (1 if side == 'right' else 0)]
+                            c = pose_landmarks[(i + 1) * 2 + (1 if side == 'right' else 0)]
+                            
+                        else:
+                            a = pose_landmarks[self.main_land_num[side][i-1]]
+                            b = pose_landmarks[self.main_land_num[side][i]]
+                            c = pose_landmarks[self.main_land_num[side][i+1]]
                   
-                    angle = calculate_angle(a, b, c)
-                    one_tempo_angle[side][self.main_land_name[side][i]].append(angle)
+                        angle = calculate_angle(a, b, c)
+                        one_tempo_angle[side][self.main_land_name[side][i]].append(angle)
                     # self.angle_info[side][self.main_land_name[side][i]] = np.append(self.angle_info[side][self.main_land_name[side][i]], angle)
             
                     
@@ -347,7 +363,7 @@ class AnalysisTempoCount:
     # Plot the information in angle info by left and right and save as two image files
     def draw_save_angle_plot(self):
       x_line = np.arange(self.last_frame_idx)
-      print(sum([len(i) for i in self.angle_info['left']['left_hip']]))
+      #print(sum([len(i) for i in self.angle_info['left']['left_hip']]))
       for side in ['left', 'right']:
         for key in self.angle_info[side].keys():
           y_line = list(itertools.chain.from_iterable(self.angle_info[side][key]))
@@ -362,12 +378,24 @@ class AnalysisTempoCount:
       print("Complete to save angle plot")
 
 class Person:
-  def __init__(self, name, preferred_fitness, input_video_dir = None, sample_video_path = 'data/fitness_poses_csvs_out'):
+  def __init__(self, name, preferred_fitness, input_video_dir = None, sample_csv_path = 'data/fitness_poses_csvs_out'):
     self.name = name
     self.preferred_fitness = preferred_fitness
     self.last_fitness = None
     self.input_video_dir = input_video_dir
-    self.sample_video_path = sample_video_path
+    self.sample_csv_path = sample_csv_path
+    self.save_video_dir = f'Result/{name}'
+    
+    try:
+        if not os.path.exists(self.save_video_dir):
+            os.makedirs(self.save_video_dir)
+        
+        for fitness in preferred_fitness:
+            path = os.path.join(self.save_video_dir, fitness)
+            if not os.path.exists(path):
+                os.makedirs(path)
+    except:
+        print("Error to make directory")
     
   def get_name(self):
     return self.name
@@ -385,14 +413,15 @@ class Person:
     self.last_fitness = fitness
     print(f"----------{self.name} starts {fitness}----------")
     
-    video_path = f'{self.input_video_dir}/{fitness}.mp4'
+    input_video = f'{self.input_video_dir}/{fitness}.mp4'
+    output_dir = os.path.join(self.save_video_dir, fitness)
     
     fitness_analyzer = AnalysisTempoCount(fitness = fitness, 
                                           mode = mode,
                                           show = True, 
-                                          video_path = video_path,
-                                          out_video_dir = f'Result/{self.name}/{fitness}', 
-                                          sample_csv_path=self.sample_video_path)
+                                          video_path = input_video,
+                                          out_video_dir = output_dir, 
+                                          sample_csv_path = self.sample_csv_path)
     print(f"----------{self.name} ends {fitness}----------")
   
   
