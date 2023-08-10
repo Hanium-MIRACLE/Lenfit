@@ -1,7 +1,6 @@
 from matplotlib import pyplot as plt
 import csv
 import os
-import numpy as np
 
 def show_image(img, figsize=(10, 10)):
   """Shows output PIL image."""
@@ -32,18 +31,5 @@ def dump_for_the_app(fitness): # dump the csv files for the app
           row.insert(1, class_name)
           csv_out_writer.writerow(row)
   
-# 2개의 3차원 좌표의 각도 계산
-def calculate_angle(a, b, c):
-  a = np.array(a) # 2개의 3차원 좌표를 array로 변환
-  b = np.array(b)
-  c = np.array(c)
-  
-  # 각도 계산
-  radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-  angle = np.abs(radians*180.0/np.pi)
-  
-  # 180도를 넘으면 360도에서 빼준다.
-  if angle >180.0:
-    angle = 360-angle
-    
-  return angle
+
+

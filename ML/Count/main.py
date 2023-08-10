@@ -1,4 +1,5 @@
 from src.object import *
+from src.func import *
 
 # main
 if __name__ == '__main__':
@@ -19,8 +20,11 @@ if __name__ == '__main__':
     
     name = 'jack'
     input_video_dir = f'data/test_img/{name}'       # input video path
-    
+
     minsoo = Person(name = name, 
                     preferred_fitness = ['squat', 'pushups'], 
                     input_video_dir = input_video_dir)
-    minsoo.analyze_fitness(fitness='pushups', mode='Video')
+
+    for fit in minsoo.preferred_fitness:
+        minsoo.analyze_fitness(fitness=fit)
+    
