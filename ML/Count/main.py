@@ -1,24 +1,39 @@
 from src.object import *
+from src.func import *
+
+
+'''
+Result 저장 형식
+
+이름 /
+    날짜 1/
+        운동 이름 1/
+            ...
+        운동 이름 2/
+            ...
+        ...
+    날짜 2/
+        운동 이름 1/   
+            ...
+        운동 이름 2/   
+            ...
+        ...
+    ...
+
+'''
+
+
 
 # main
 if __name__ == '__main__':
 
-    fitness = 'pushups' # squat or pushups
-
-    # video_path=f'data/test_img/{fitness}.mp4'       # input video path
-    # save_video_dir = f'Result/{fitness}'             # save video dir
-    # sample_csv_path = 'data/fitness_poses_csvs_out' # Landmark Info of fitness poses
-    # mode = "Video"                                  # Video or Webcam
-
-    # lenfit = AnalysisTempoCount(fitness=fitness, 
-    #                         video_path=video_path, 
-    #                         out_video_dir = save_video_dir, 
-    #                         sample_csv_path = sample_csv_path,  
-    #                         mode = mode, 
-    #                         show = True)
-    
-    name = 'jack'
+    name = 'minsoo'
     input_video_dir = f'data/test_img/{name}'       # input video path
+
+    minsoo = Person(name = name, 
+                    preferred_fitness = ['squat', 'pushups'], 
+                    input_video_dir = input_video_dir)
+
+
+    minsoo.analyze_fitness(fitness='pushups', mode='Video')
     
-    minsoo = Person(name = name, preferred_fitness = ['squat', 'pushups'], input_video_dir = input_video_dir)
-    minsoo.analyze_fitness(fitness='squat', mode='Video')
