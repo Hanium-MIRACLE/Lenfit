@@ -1,0 +1,10 @@
+
+/ML/count/Result/
+/ML/score/Result/
+/ML/score/src/__pycache__/
+/ML/count/src/__pycache__/
+/ML/feedback/__pycache__/
+/ML/count/pullup
+.DS_Store
+ML/.DS_Store
+ML/count/.DS_Store
